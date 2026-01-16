@@ -6,21 +6,6 @@ from roles.trustee import Trustee
 from roles.verifier import Verifier
 
 
-
-def lagrange_coeff(j, S, q):
-    """
-    Lagrange coefficient λ_j for index j
-    S = list of indices
-    """
-    num, den = 1, 1
-    for k in S:
-        if k == j:
-            continue
-        num = (num * (-k)) % q
-        den = (den * (j - k)) % q
-    return num * pow(den, -1, q) % q
-
-
 def main():
     print("=== 1. Generate group parameters ===")
     p, q, g, h = generate_group(128)
@@ -70,10 +55,11 @@ def main():
         if is_valid:
             verified_ratings.append(r_data)
 
+
     print()
 
     print("=== 5. Aggregate encrypted ratings ===")
-    organizer = Organizer(p)
+    organizer = Organizer(p, q, g)
     (C1_agg, C2_agg), n = organizer.collect(verified_ratings)
 
     print("Aggregated ciphertext:")
@@ -97,24 +83,14 @@ def main():
     print()
 
     # Combine partial decryptions
-    D = 1
-    for Di, j in zip(partials, indices):
-        l = lagrange_coeff(j, indices, q)
-        D = (D * pow(Di, l, p)) % p
-
-    M = (C2_agg * pow(D, -1, p)) % p
+    M = organizer.combine_decryptions(partials, indices, C2_agg)
 
     print("Recovered g^sum =", M)
     print()
 
     print("=== 7. Decode result ===")
-    max_sum = n * 10
-    recovered_sum = None
 
-    for x in range(max_sum + 1):
-        if pow(g, x, p) == M:
-            recovered_sum = x
-            break
+    recovered_sum = organizer.decode_result(n, M)
 
     print("Recovered sum of ratings =", recovered_sum)
     print("Average rating =", recovered_sum / n)
