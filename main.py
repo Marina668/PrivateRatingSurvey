@@ -62,18 +62,19 @@ def main():
 
     print("=== 4. Verify zero-knowledge range proofs ===")
     verifier = Verifier(p, q, g, h, pk)
+    verified_ratings = []
 
     for i, r_data in enumerate(ratings):
         is_valid = verifier.verify_rating(r_data)
         print(f"Rating {i + 1} valid: {is_valid}")
-        if not is_valid:
-            raise ValueError("Input rating must be in the range from 0 to 10")
+        if is_valid:
+            verified_ratings.append(r_data)
 
     print()
 
     print("=== 5. Aggregate encrypted ratings ===")
     organizer = Organizer(p)
-    (C1_agg, C2_agg), n = organizer.collect(ratings)
+    (C1_agg, C2_agg), n = organizer.collect(verified_ratings)
 
     print("Aggregated ciphertext:")
     print("C1 =", C1_agg)
@@ -116,7 +117,6 @@ def main():
             break
 
     print("Recovered sum of ratings =", recovered_sum)
-    print("Expected sum =", sum(ratings_values))
     print("Average rating =", recovered_sum / n)
 
 
